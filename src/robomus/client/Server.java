@@ -48,7 +48,14 @@ public class Server {
     public void setPort(int port) {
         this.port = port;
     }
-   
+
+    @Override
+    public String toString() {
+        return "Server{" + "serverOscAdress=" + serverOscAdress + ", serverIpAdress=" + serverIpAdress + ", port=" + port + '}';
+    }
+
+    
+    
     
     
 }

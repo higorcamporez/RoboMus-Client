@@ -36,16 +36,7 @@ public class RoboMusClient {
     
     public RoboMusClient() {
         this.instruments = new ArrayList<>();
-        try {
-            this.server = new Server("/server",InetAddress.getByName("192.168.173.1"),1234 );
-        } catch (UnknownHostException ex) {
-            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        try {
-            this.sender = new OSCPortOut(this.server.getServerIpAdress(), this.server.getPort());
-        } catch (SocketException ex) {
-            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        
         try {
             this.receiver = new OSCPortIn(12345);
         } catch (SocketException ex) {
@@ -65,6 +56,16 @@ public class RoboMusClient {
             }
         }
     }
+    
+    public void printServer(){
+        if(this.server != null){
+           System.out.println(this.server.toString()); 
+        }else{
+           System.out.println("Server Not Found");
+        }
+        
+    }
+    
     public void printHeader(){
         if(selectedInstrument != null){
             System.out.print(commandHeader+selectedInstrument.getName()+">");
@@ -73,6 +74,7 @@ public class RoboMusClient {
         }
         
     }
+    
     public void commandUse(String[] arrayIn){
 
         if (arrayIn.length >= 2) {
@@ -89,14 +91,11 @@ public class RoboMusClient {
             
         }
     }
+    
     public void commandShow(String[] arrayIn){
 
         if (arrayIn.length >= 2) {
             switch (arrayIn[1]) {
-                case "instr":
-                case "instruments":
-                    printInstruments();
-                    break;
                 case "actions":
                 case "act":
                     if(selectedInstrument == null){
@@ -105,6 +104,14 @@ public class RoboMusClient {
                         System.out.println(selectedInstrument.getSpecificProtocol());
                     }
                 break;
+                case "instr":
+                case "instruments":
+                    printInstruments();
+                    break;
+                case "serv":
+                case "server":
+                    printServer();
+                    break;
                 default:
                     System.out.println("command not found");
                     break;
@@ -200,16 +207,6 @@ public class RoboMusClient {
             String[] arrayIn = keyboardIn.split(" ");
             if (arrayIn.length >= 1) {
                 switch (arrayIn[0]) {
-                    case "get":
-                        commandGet(arrayIn);
-                        break;
-                    case "sh":
-                    case "show":
-                        commandShow(arrayIn);
-                        break;
-                    case "use":
-                        commandUse(arrayIn);
-                        break;
                     case "act":
                     case "action":
                         if(selectedInstrument == null){
@@ -219,6 +216,21 @@ public class RoboMusClient {
                         }
                         
                         break;
+                    case "get":
+                        commandGet(arrayIn);
+                        break;
+                    case "hand":
+                    case "handshake":
+                        sendHandshake();
+                        break;
+                    case "sh":
+                    case "show":
+                        commandShow(arrayIn);
+                        break;
+                    case "use":
+                        commandUse(arrayIn);
+                        break;
+                    
                     case "..":
                         selectedInstrument = null;
                         break;
@@ -234,16 +246,68 @@ public class RoboMusClient {
         }
         
     }
+    
     public void sendGetInstruments(){
-              
-        OSCMessage msg = new OSCMessage(this.server.getServerOscAdress()+"/getInstruments");
-        msg.addArgument("/RoboMusClient");
-        try {
-            this.sender.send(msg);
-        } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        if(this.server == null){
+            System.out.println("No server connected");
+        }else{     
+            OSCMessage msg = new OSCMessage(this.server.getServerOscAdress()+"/getInstruments");
+            msg.addArgument("/RoboMusClient");
+            try {
+                this.sender.send(msg);
+            } catch (IOException ex) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
             
+    }
+    
+    public void sendHandshake() {
+              
+        OSCMessage msg = new OSCMessage("/handshake/client");
+        msg.addArgument("RoboMusClient");
+        msg.addArgument("/RoboMusClient");
+        try {
+            msg.addArgument(InetAddress.getLocalHost().getHostAddress());
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        msg.addArgument(12345);
+        OSCPortOut s;
+        try {
+            s = new OSCPortOut(InetAddress.getByName("192.168.0.255"), 1234);
+            s.send(msg);
+            System.out.println("handshake sent");
+        } catch (SocketException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+  
+            
+    }
+    
+    public void receiveHandshake(OSCMessage msg) {
+        List arguments = msg.getArguments();
+                
+        this.server = new Server();
+
+        server.setServerOscAdress((String)arguments.get(0));
+        try {
+            server.setServerIpAdress(InetAddress.getByName((String)arguments.get(1)));
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        server.setPort(Integer.parseInt(arguments.get(2).toString()));
+        
+        try {
+            this.sender = new OSCPortOut(this.server.getServerIpAdress(), this.server.getPort());
+        } catch (SocketException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
     
     public void receiveGetInstruments(OSCMessage msg){
@@ -256,9 +320,13 @@ public class RoboMusClient {
         instrument.setTypeFamily((String)arguments.get(2));
         instrument.setSpecificProtocol((String)arguments.get(3));
         instrument.setOscAddress((String)arguments.get(4));
-        this.instruments.add(instrument);
+        if(! this.instruments.contains(instrument) ){
+           this.instruments.add(instrument);
+        }
+        
         
     }
+    
     public String[] divideAddress(String address){
         String aux = address;
         if (aux.startsWith("/")) {
@@ -281,6 +349,11 @@ public class RoboMusClient {
                             case "instrument":
                                 receiveGetInstruments(message);
                                 break;
+                            case "handshake":
+                                receiveHandshake(message);
+                                System.out.println("\nreceive handshake | "+server.toString());
+                                System.out.print(commandHeader);
+                                break;
                             default:
                                 System.out.println("recebeu msg default");
                                 break;
@@ -288,6 +361,8 @@ public class RoboMusClient {
                         }
                     }
                 }
+
+              
             };
             receiver.addListener("/RoboMusClient"+"/*", listener);
             receiver.addListener("/RoboMusClient"+"/*/*", listener);
