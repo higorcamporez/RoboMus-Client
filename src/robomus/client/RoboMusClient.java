@@ -33,6 +33,8 @@ public class RoboMusClient {
     private OSCPortIn receiver;
     private String commandHeader;
     private Instrument selectedInstrument = null;
+    private String oscAdress;
+    private Boolean newInstrumentsFlag;
     
     public RoboMusClient() {
         this.instruments = new ArrayList<>();
@@ -44,7 +46,10 @@ public class RoboMusClient {
         }
         this.receiveMessages();
         this.commandHeader = "RoboMusClient>";
+        this.oscAdress = "/RoboMusClient";
+        this.newInstrumentsFlag = false;
         getCommands();
+        
     }
     public void printInstruments(){
         if(instruments.isEmpty()){
@@ -157,7 +162,7 @@ public class RoboMusClient {
         args.add(0, l);
         args.add(1, 123); //message id
         
-        OSCMessage msg = new OSCMessage(this.server.getServerOscAdress()
+        OSCMessage msg = new OSCMessage(this.server.getOscAdress()
                                         +selectedInstrument.getOscAddress()
                                         +oscAdress, 
                                         args);
@@ -223,6 +228,10 @@ public class RoboMusClient {
                     case "handshake":
                         sendHandshake();
                         break;
+                    case "disc":
+                    case "disconnected":
+                        disconnect();
+                        break;
                     case "sh":
                     case "show":
                         commandShow(arrayIn);
@@ -251,7 +260,7 @@ public class RoboMusClient {
         if(this.server == null){
             System.out.println("No server connected");
         }else{     
-            OSCMessage msg = new OSCMessage(this.server.getServerOscAdress()+"/getInstruments");
+            OSCMessage msg = new OSCMessage(this.server.getOscAdress()+"/getInstruments");
             msg.addArgument("/RoboMusClient");
             try {
                 this.sender.send(msg);
@@ -266,7 +275,7 @@ public class RoboMusClient {
               
         OSCMessage msg = new OSCMessage("/handshake/client");
         msg.addArgument("RoboMusClient");
-        msg.addArgument("/RoboMusClient");
+        msg.addArgument(this.oscAdress);
         try {
             msg.addArgument(InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException ex) {
@@ -293,17 +302,17 @@ public class RoboMusClient {
         List arguments = msg.getArguments();
                 
         this.server = new Server();
-
-        server.setServerOscAdress((String)arguments.get(0));
+        server.setName(arguments.get(0).toString());
+        server.setOscAdress(arguments.get(1).toString());
         try {
-            server.setServerIpAdress(InetAddress.getByName((String)arguments.get(1)));
+            server.setIpAdress(InetAddress.getByName((String)arguments.get(2)));
         } catch (UnknownHostException ex) {
             Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
         }
-        server.setPort(Integer.parseInt(arguments.get(2).toString()));
+        server.setPort(Integer.parseInt(arguments.get(3).toString()));
         
         try {
-            this.sender = new OSCPortOut(this.server.getServerIpAdress(), this.server.getPort());
+            this.sender = new OSCPortOut(this.server.getIpAdress(), this.server.getPort());
         } catch (SocketException ex) {
             Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -311,7 +320,10 @@ public class RoboMusClient {
     }
     
     public void receiveGetInstruments(OSCMessage msg){
-              
+        System.out.println(msg.getAddress()+" "+msg.isFirstMessage);
+        if(msg.isFirstMessage){
+            instruments.clear();
+        }     
         Instrument instrument = new Instrument();
         List arguments = msg.getArguments();
 
@@ -326,6 +338,21 @@ public class RoboMusClient {
         
         
     }
+    public void disconnect() {
+        
+        OSCMessage msg = new OSCMessage(this.server.getOscAdress()
+                                        +"/disconnect/client"
+                                        );
+        msg.addArgument(this.oscAdress);
+        try {
+            this.sender.send(msg);
+        
+        } catch (IOException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        this.server = null;
+    }
+    
     
     public String[] divideAddress(String address){
         String aux = address;
@@ -347,6 +374,7 @@ public class RoboMusClient {
                     if (dividedAdress.length >= 2) {
                         switch (dividedAdress[1]) {
                             case "instrument":
+                                
                                 receiveGetInstruments(message);
                                 break;
                             case "handshake":
@@ -359,6 +387,10 @@ public class RoboMusClient {
                                 break;
 
                         }
+                        if(!dividedAdress[1].equals("instrument")){
+                            newInstrumentsFlag = false;
+                        }
+                        
                     }
                 }
 
@@ -380,5 +412,6 @@ public class RoboMusClient {
         roboMusClient.sendGetInstruments();
         
     }
-    
+
+ 
 }

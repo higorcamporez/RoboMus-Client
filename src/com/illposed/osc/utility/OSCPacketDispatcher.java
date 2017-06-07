@@ -58,6 +58,11 @@ public class OSCPacketDispatcher {
 	private void dispatchBundle(OSCBundle bundle) {
 		final Date timestamp = bundle.getTimestamp();
 		final List<OSCPacket> packets = bundle.getPackets();
+                
+                if(packets.get( 0 ) instanceof OSCMessage){
+                    OSCMessage oscMessage = (OSCMessage) packets.get(0);
+                    oscMessage.isFirstMessage = true;
+                }
 		for (final OSCPacket packet : packets) {
 			dispatchPacket(packet, timestamp);
 		}

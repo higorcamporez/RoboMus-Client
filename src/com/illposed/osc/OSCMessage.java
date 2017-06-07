@@ -40,7 +40,8 @@ public class OSCMessage extends AbstractOSCPacket {
 	private String address;
 	private List<Object> arguments;
         private InetAddress ip;
-
+        public Boolean isLastMessage = false; //ultima mensagem do bundle;
+        public Boolean isFirstMessage = false; //ultima mensagem do bundle;
         
         
         
@@ -107,6 +108,8 @@ public class OSCMessage extends AbstractOSCPacket {
         public void setIp(InetAddress ip) {
             this.ip = ip;
         }
+
+        
 	/**
 	 * Add an argument to the list of arguments.
 	 * @param argument a Float, Double, String, Character, Integer, Long, Boolean, null
@@ -180,4 +183,5 @@ public class OSCMessage extends AbstractOSCPacket {
 				&& !address.contains("//")
 				&& !ILLEGAL_ADDRESS_CHAR.matcher(address).find();
 	}
+        
 }

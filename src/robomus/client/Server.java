@@ -12,33 +12,44 @@ import java.net.InetAddress;
  * @author Higor
  */
 public class Server {
-    private String serverOscAdress;
-    private InetAddress serverIpAdress;
+    private String name;
+    private String oscAdress;
+    private InetAddress ipAdress;
     private int port;
 
     public Server() {
     }
     
-    public Server(String serverOscAdress, InetAddress serverIpAdress, int port) {
-        this.serverOscAdress = serverOscAdress;
-        this.serverIpAdress = serverIpAdress;
+
+    public Server(String name, String serverOscAdress, InetAddress serverIpAdress, int port) {
+        this.name = name;
+        this.oscAdress = serverOscAdress;
+        this.ipAdress = serverIpAdress;
         this.port = port;
     }
-
-    public String getServerOscAdress() {
-        return serverOscAdress;
+    
+    public String getName() {
+        return name;
     }
 
-    public void setServerOscAdress(String serverOscAdress) {
-        this.serverOscAdress = serverOscAdress;
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public String getOscAdress() {
+        return oscAdress;
     }
 
-    public InetAddress getServerIpAdress() {
-        return serverIpAdress;
+    public void setOscAdress(String oscAdress) {
+        this.oscAdress = oscAdress;
     }
 
-    public void setServerIpAdress(InetAddress serverIpAdress) {
-        this.serverIpAdress = serverIpAdress;
+    public InetAddress getIpAdress() {
+        return ipAdress;
+    }
+
+    public void setIpAdress(InetAddress ipAdress) {
+        this.ipAdress = ipAdress;
     }
 
     public int getPort() {
@@ -51,11 +62,8 @@ public class Server {
 
     @Override
     public String toString() {
-        return "Server{" + "serverOscAdress=" + serverOscAdress + ", serverIpAdress=" + serverIpAdress + ", port=" + port + '}';
+        return "Server{" + "name=" + name + ", oscAdress=" + oscAdress +
+               ", ipAdress=" + ipAdress + ", port=" + port + '}';
     }
 
-    
-    
-    
-    
 }
