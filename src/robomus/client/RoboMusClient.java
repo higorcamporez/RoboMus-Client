@@ -34,7 +34,6 @@ public class RoboMusClient {
     private String commandHeader;
     private Instrument selectedInstrument = null;
     private String oscAdress;
-    private Boolean newInstrumentsFlag;
     
     public RoboMusClient() {
         this.instruments = new ArrayList<>();
@@ -47,7 +46,6 @@ public class RoboMusClient {
         this.receiveMessages();
         this.commandHeader = "RoboMusClient>";
         this.oscAdress = "/RoboMusClient";
-        this.newInstrumentsFlag = false;
         getCommands();
         
     }
@@ -320,7 +318,7 @@ public class RoboMusClient {
     }
     
     public void receiveGetInstruments(OSCMessage msg){
-        System.out.println(msg.getAddress()+" "+msg.isFirstMessage);
+        
         if(msg.isFirstMessage){
             instruments.clear();
         }     
@@ -335,6 +333,7 @@ public class RoboMusClient {
         if(! this.instruments.contains(instrument) ){
            this.instruments.add(instrument);
         }
+        System.out.println("received "+instrument.getName());
         
         
     }
@@ -353,6 +352,13 @@ public class RoboMusClient {
         this.server = null;
     }
     
+    public void disconnectInstrument(OSCMessage oscMessage){
+        Instrument instrument = new Instrument();
+        instrument.setOscAddress(oscMessage.getArguments().get(0).toString());
+        if ( this.instruments.remove(instrument) ){
+            System.out.println("Instrument '"+oscMessage.getArguments().get(0).toString()+"' disconnected");
+        }
+    }
     
     public String[] divideAddress(String address){
         String aux = address;
@@ -374,8 +380,10 @@ public class RoboMusClient {
                     if (dividedAdress.length >= 2) {
                         switch (dividedAdress[1]) {
                             case "instrument":
-                                
                                 receiveGetInstruments(message);
+                                break;
+                            case "disconnect":
+                                disconnectInstrument(message);
                                 break;
                             case "handshake":
                                 receiveHandshake(message);
@@ -387,9 +395,7 @@ public class RoboMusClient {
                                 break;
 
                         }
-                        if(!dividedAdress[1].equals("instrument")){
-                            newInstrumentsFlag = false;
-                        }
+                     
                         
                     }
                 }
