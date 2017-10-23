@@ -25,6 +25,10 @@ public class Instrument implements Serializable{
     public Instrument(){
     }
 
+    public Instrument(String OscAddress) {
+        this.OscAddress = OscAddress;
+    }
+     
     public Instrument(String name, int polyphony, String OscAddress, String typeFamily, String specificProtocol) {
         this.name = name;
         this.polyphony = polyphony;

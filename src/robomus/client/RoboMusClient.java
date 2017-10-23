@@ -17,6 +17,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import robomus.instrument.Instrument;
@@ -46,6 +47,10 @@ public class RoboMusClient {
         this.receiveMessages();
         this.commandHeader = "RoboMusClient>";
         this.oscAdress = "/RoboMusClient";
+        System.out.println("RoboMusClient>handshake");
+        sendHandshake();
+        System.out.println("RoboMusClient>get instr");
+        sendGetInstruments();
         getCommands();
         
     }
@@ -156,9 +161,7 @@ public class RoboMusClient {
         return null;
     }
     public void sendAction(String oscAdress, List args){
-        long l = 100;
-        args.add(0, l);
-        args.add(1, 123); //message id
+        
         
         OSCMessage msg = new OSCMessage(this.server.getOscAdress()
                                         +selectedInstrument.getOscAddress()
@@ -173,6 +176,9 @@ public class RoboMusClient {
     public void commandAction(String[] arrayIn){
         List actParamName = null;
         List actParameters = new ArrayList();
+        
+        Random random = new Random();
+        actParameters.add(0, random.nextInt(1000)); //message id
         
         if (arrayIn.length >= 2) {
             actParamName = getActionParametersName(arrayIn[1]);
@@ -223,6 +229,7 @@ public class RoboMusClient {
                         commandGet(arrayIn);
                         break;
                     case "hand":
+                    case "hs":
                     case "handshake":
                         sendHandshake();
                         break;
@@ -237,7 +244,9 @@ public class RoboMusClient {
                     case "use":
                         commandUse(arrayIn);
                         break;
-                    
+                    case "bday":
+                        playHappyBirthday();
+                        break;
                     case "..":
                         selectedInstrument = null;
                         break;
@@ -270,11 +279,18 @@ public class RoboMusClient {
     }
     
     public void sendHandshake() {
-              
+        
+         String[] ip = {"255","255","255","255"};
+        try {
+            ip = InetAddress.getLocalHost().getHostAddress().split("\\.");
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
         OSCMessage msg = new OSCMessage("/handshake/client");
         msg.addArgument("RoboMusClient");
         msg.addArgument(this.oscAdress);
         try {
+           
             msg.addArgument(InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException ex) {
             Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -282,9 +298,29 @@ public class RoboMusClient {
         msg.addArgument(12345);
         OSCPortOut s;
         try {
-            s = new OSCPortOut(InetAddress.getByName("192.168.0.255"), 1234);
+            s = new OSCPortOut(InetAddress.getByName(ip[0]+"."+ip[1]+"."+ip[2]+".255"), 1234);
             s.send(msg);
-            System.out.println("handshake sent");
+            System.out.println("handshake sent. Wait max 5 sec");
+            Long ti = System.currentTimeMillis();
+            Boolean flag = false;
+            float count = 1;
+            while( (System.currentTimeMillis() - ti ) < 5001 ){
+               if(this.server != null){
+                   flag = true;
+                   System.out.println("\nreceive handshake | "+server.toString());
+                   
+                   break;
+               }else{
+                   if( (float)((System.currentTimeMillis() - ti )/1000) == count){
+                       System.out.println(count);
+                       count++;
+                   }
+               }
+            }
+            if(flag == false){
+                System.out.println("Server no connected");
+            }
+            
         } catch (SocketException ex) {
             Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
         } catch (UnknownHostException ex) {
@@ -387,8 +423,6 @@ public class RoboMusClient {
                                 break;
                             case "handshake":
                                 receiveHandshake(message);
-                                System.out.println("\nreceive handshake | "+server.toString());
-                                System.out.print(commandHeader);
                                 break;
                             default:
                                 System.out.println("recebeu msg default");
@@ -408,6 +442,60 @@ public class RoboMusClient {
             receiver.startListening();
 
     }
+    public void playHappyBirthday(){
+        Instrument laplap, laplap2;
+        int index;
+        index = this.instruments.indexOf(new Instrument("/laplap"));
+        if(index != -1){
+            laplap = this.instruments.get(index);
+        }else{
+            System.out.println("There is no laplap");
+            return;
+        }
+           
+        index = this.instruments.indexOf(new Instrument("/laplap2"));
+        if(index != -1){
+            laplap2 = this.instruments.get(index);
+        }else{
+            System.out.println("There is no laplap2");
+            return;
+        }
+        
+        //E|----0-0-2-0-5-4--0-0-2-0-7-5-5--9-9-12-9-5-4-2--10-10-9-5-7-5-5--------|
+        //music notes E4-E4-F#4-E4-A4-G#4--
+        //            E4-E4-F#4-E4-B4-A4-A4--
+        //            C#5-C#5-E5-C#5-A4-G#4-F#4--
+        //            D5-D5-C#5-A4-B4-A4-A4
+        int time = 800;
+        String[] notes = {  "E4","E4","F#4","E4","A4","G#4",
+                            "E4","E4","F#4","E4","B4","A4","A4"};
+        List l1 = new ArrayList();
+        l1.add("E4");
+        l1.add("E4");
+        l1.add("F#4");
+        l1.add("E4");
+        int[] duration = {  time,time,time,time,time,time,
+                            time,time,time,time,time,time,time};
+        List l = new ArrayList();
+
+        for (int i = 0; i < notes.length; i++) {
+            l.clear();
+            l.add(l1);
+            if( i%2 == 0){
+                this.selectedInstrument = laplap;
+            }else{
+                this.selectedInstrument = laplap2;
+            }
+            sendAction("/playNote", l);
+            try {
+                Thread.sleep(duration[i]);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            System.out.println("Note: "+notes[i]);
+        }
+        System.out.println("");
+    }
     /**
      * @param args the command line arguments
      */
@@ -415,7 +503,7 @@ public class RoboMusClient {
     public static void main(String[] args) {
         // TODO code application logic here
         RoboMusClient roboMusClient = new RoboMusClient();
-        roboMusClient.sendGetInstruments();
+        
         
     }
 
