@@ -35,8 +35,9 @@ public class RoboMusClient {
     private String commandHeader;
     private Instrument selectedInstrument = null;
     private String oscAdress;
-    
+
     public RoboMusClient() {
+        
         this.instruments = new ArrayList<>();
         
         try {
@@ -53,6 +54,25 @@ public class RoboMusClient {
         sendGetInstruments();
         getCommands();
         
+    }
+    public void printCommands(){
+        System.out.println("\n___________________COMMANDS___________________");
+        System.out.println("- action[act]");
+        System.out.println("\t - (instrument name)");            
+        System.out.println("- get[g]");
+        System.out.println("\t - instruments[instr]");
+        System.out.println("- show[sh]");
+        System.out.println("\t - actions[act] | instruments[instr] | server[server]");
+        System.out.println("- use[u]");
+        System.out.println("\t - (instrument name)");
+        System.out.println("- handshake[hand]");
+        System.out.println("\t -");
+        System.out.println("- disconnect[disc]");
+        System.out.println("\t -");
+        System.out.println("- ..");
+        System.out.println("\t -");
+        System.out.println("______________________________________________");
+
     }
     public void printInstruments(){
         if(instruments.isEmpty()){
@@ -109,7 +129,11 @@ public class RoboMusClient {
                     if(selectedInstrument == null){
                         System.out.println("Select one instrument first!");
                     }else{
-                        System.out.println(selectedInstrument.getSpecificProtocol());
+                        String[] aux = selectedInstrument.getSpecificProtocol().split(">");
+
+                        for (String string : aux) {
+                            System.out.println(string+">");
+                        }
                     }
                 break;
                 case "instr":
@@ -225,6 +249,7 @@ public class RoboMusClient {
                         }
                         
                         break;
+                    case "g":
                     case "get":
                         commandGet(arrayIn);
                         break;
@@ -234,13 +259,14 @@ public class RoboMusClient {
                         sendHandshake();
                         break;
                     case "disc":
-                    case "disconnected":
+                    case "disconnect":
                         disconnect();
                         break;
                     case "sh":
                     case "show":
                         commandShow(arrayIn);
                         break;
+                    case "u":
                     case "use":
                         commandUse(arrayIn);
                         break;
@@ -249,6 +275,10 @@ public class RoboMusClient {
                         break;
                     case "..":
                         selectedInstrument = null;
+                        break;
+                    case "h":
+                    case "help":    
+                        printCommands();
                         break;
                     case "":
 
@@ -305,10 +335,14 @@ public class RoboMusClient {
             Boolean flag = false;
             float count = 1;
             while( (System.currentTimeMillis() - ti ) < 5001 ){
-               if(this.server != null){
+               if(this.server != null && this.server.getIpAdress() != null){
                    flag = true;
                    System.out.println("\nreceive handshake | "+server.toString());
-                   
+                   try {
+                       Thread.sleep(500);
+                   } catch (InterruptedException ex) {
+                       Logger.getLogger(RoboMusClient.class.getName()).log(Level.SEVERE, null, ex);
+                   }
                    break;
                }else{
                    if( (float)((System.currentTimeMillis() - ti )/1000) == count){
@@ -369,7 +403,7 @@ public class RoboMusClient {
         if(! this.instruments.contains(instrument) ){
            this.instruments.add(instrument);
         }
-        System.out.println("received "+instrument.getName());
+        System.out.print("\n received "+instrument.getName());
         
         
     }
